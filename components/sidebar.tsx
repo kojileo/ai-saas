@@ -3,44 +3,36 @@ import Link from "next/link";
 import Image from "next/image";
 import { Montserrat } from "next/font/google";
 import { usePathname } from "next/navigation";
-import {
-  LayoutDashboard,
-  MessageSquare,
-  ImageIcon,
-  VideoIcon,
-  Music,
-  Code,
-  Settings,
-} from "lucide-react";
+import { LayoutDashboard, File, MessageSquare, Code } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { FreeCounter } from "./free-counter";
 
 const montserrat = Montserrat({ weight: "600", subsets: ["latin"] });
 
 const routes = [
   {
-    label: "Dashboard",
+    label: "ワークスペース",
     icon: LayoutDashboard,
     href: "/dashboard",
     color: "text-sky-500",
   },
   {
-    label: "Conversations",
+    label: "ファイル要約",
+    icon: File,
+    href: "/file",
+    color: "text-red-500",
+  },
+  {
+    label: "チャットボット",
     icon: MessageSquare,
     href: "/conversation",
     color: "text-violet-500",
   },
   {
-    label: "Code Generation",
+    label: "コード生成",
     icon: Code,
     href: "/code",
     color: "text-green-700",
-  },
-  {
-    label: "Settings",
-    icon: Settings,
-    href: "/settings",
   },
 ];
 
@@ -55,7 +47,7 @@ const Sidebar = () => {
               <Image alt="logo" src="/logo.png" width={32} height={32} />{" "}
             </div>
             <h1 className={cn("text-2xl font-bold", montserrat.className)}>
-              Genius
+              AI platform
             </h1>
           </div>
         </Link>

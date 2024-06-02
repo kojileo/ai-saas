@@ -4,30 +4,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const testimonials = [
   {
-    name: "Gideon",
-    avatar: "G",
-    title: "Software Engineer",
-    description: "This is the best application I've ever used!",
+    name: "Webアプリ",
+    avatar: "",
+    title: "",
+    description: "URLを共有してWebアプリとして生成アプリを公開できる",
   },
   {
-    name: "Nancy",
-    avatar: "N",
-    title: "Designer",
-    description: "I use this daily for generating new photos!",
-  },
-  {
-    name: "Atim",
-    avatar: "A",
-    title: "CEO",
-    description:
-      "This app has changed my life, cannot imagine working without it!",
-  },
-  {
-    name: "Mary",
-    avatar: "M",
-    title: "CFO",
-    description:
-      "The best in class, definitely worth the premium subscription!",
+    name: "API",
+    avatar: "",
+    title: "",
+    description: "APIを公開して、他サービスと連携できる",
   },
 ];
 
@@ -35,9 +21,9 @@ export const LandingContent = () => {
   return (
     <div className="px-10 pb-20">
       <h2 className="text-center text-4xl text-white font-extrabold mb-10">
-        Testimonials
+        2種類の方法で生成AIアプリを公開
       </h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-2 gap-2">
         {testimonials.map((item) => (
           <Card
             key={item.description}

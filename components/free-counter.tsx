@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardContent } from "./ui/card";
-import { Button } from "@/components/ui/button";
 import { MAX_FREE_COUNTS } from "@/constants";
 import { Progress } from "@/components/ui/progress";
-import { Zap } from "lucide-react";
 
 export const FreeCounter = ({
   isPro = false,

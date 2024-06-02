@@ -56,8 +56,8 @@ const ConversationPage = () => {
   return (
     <div>
       <Heading
-        title="Conversation"
-        description="Our most advanced conversation model."
+        title="チャットボット"
+        description="一般的なAIチャットアプリです"
         icon={MessageSquare}
         iconColor="text-violet-500"
         bgColor="bg-violet-500/10"
@@ -77,7 +77,7 @@ const ConversationPage = () => {
                       <Input
                         className="border-0 outline-none focus-visible:ring-0 focus-visible:ring-transparent"
                         disabled={isLoading}
-                        placeholder="How do I calculate the radius of a circle?"
+                        placeholder="ここに質問文を入力してください。"
                         {...field}
                       />
                     </FormControl>
@@ -88,7 +88,7 @@ const ConversationPage = () => {
                 className="col-span-12 lg:col-span-2 w-full"
                 disabled={isLoading}
               >
-                Generate
+                送信
               </Button>
             </form>
           </Form>
@@ -100,7 +100,7 @@ const ConversationPage = () => {
             </div>
           )}
           {messages.length === 0 && !isLoading && (
-            <Empty label="No conversation started." />
+            <Empty label="会話はまだありません。" />
           )}
           <div className="flex flex-col-reverse gap-y-4">
             {messages.map((message) => (
