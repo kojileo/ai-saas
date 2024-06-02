@@ -10,44 +10,29 @@ import ReactFlow, {
   Node,
   Edge,
   Connection,
-  EdgeTypes,
-  NodeTypes,
 } from "react-flow-renderer";
-import { ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Button, Dropdown, DropdownButton } from "react-bootstrap"; // react-bootstrapを使用
+import { Button, Dropdown, DropdownButton } from "react-bootstrap";
 
-import { Card } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
-
-import { tools } from "@/constants";
-
-const initialElements: (Node | Edge)[] = [
-  {
-    id: "1",
-    type: "input",
-    data: { label: "Start" },
-    position: { x: 50, y: 50 },
-  },
-  // 他の初期ノードとエッジ
-];
+import { initialElements } from "./constants/initialElements";
+import NodeDropdown from "./components/NodeDropdown";
 
 export default function HomePage() {
   const router = useRouter();
   const [elements, setElements] = useState<(Node | Edge)[]>(initialElements);
   const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
-  const [showDropdown, setShowDropdown] = useState(false); // ドロップダウン表示の状態を管理
+  const [showDropdown, setShowDropdown] = useState(false);
 
   const onLoad = useCallback((reactFlowInstance: { fitView: () => void }) => {
     reactFlowInstance.fitView();
   }, []);
 
   const addNode = () => {
-    setShowDropdown(true); // ノード作成ボタンを押したときにドロップダウンを表示
+    setShowDropdown(true);
   };
 
   const createNodes = () => {
-    setShowDropdown(false); // プルダウンを非表示
+    setShowDropdown(false);
     setElements((els) => {
       const newElements = [...els];
       let lastNode = elements
@@ -83,7 +68,7 @@ export default function HomePage() {
 
       return newElements;
     });
-    setSelectedLabels([]); // 選択されたラベルをリセット
+    setSelectedLabels([]);
   };
 
   const removeLastNode = () => {
@@ -167,28 +152,8 @@ export default function HomePage() {
         >
           ノード作成の準備
         </button>
-        {showDropdown && ( // showDropdownがtrueのときだけドロップダウンを表示
-          <div className="flex flex-col items-center space-y-4">
-            <DropdownButton
-              id="dropdown-basic-button"
-              title="ノードを選択"
-              onSelect={handleSelect}
-              className="mb-4"
-            >
-              <Dropdown.Item eventKey="ファイル入力">
-                ファイル入力
-              </Dropdown.Item>
-              <Dropdown.Item eventKey="ファイル要約AIモデル">
-                ファイル要約AIモデル
-              </Dropdown.Item>
-            </DropdownButton>
-            <button
-              onClick={createNodes}
-              className="p-2 bg-blue-500 text-white rounded"
-            >
-              ノードを作成
-            </button>
-          </div>
+        {showDropdown && (
+          <NodeDropdown handleSelect={handleSelect} createNodes={createNodes} />
         )}
       </div>
       <div className="flex justify-center space-x-4 mb-4">
