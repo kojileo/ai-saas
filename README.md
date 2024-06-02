@@ -1,88 +1,68 @@
-# Build a SaaS AI Platform with Next.js 13, React, Tailwind, Prisma, Stripe |
+# Next.js 13、React、Tailwind、Prisma、Stripe を使用した SaaS AI プラットフォームの構築
 
+Next.js（フルスタック）13 を使用した SaaS AI プラットフォーム。
 
+### 必要条件
 
-A  SaaS AI Platform with Next.js(Fullstack) 13, React, Tailwind, Prisma and Stripe.
+**Node バージョン 18.x.x**
 
+````
 
-Features:
-
-- Tailwind design
-- Tailwind animations and effects
-- Full responsiveness
-- Clerk Authentication (Email, Google, 9+ Social Logins)
-- Client form validation and handling using react-hook-form
-- Server error handling using react-toast
-- Image Generation Tool (Open AI)
-- Video Generation Tool (Replicate AI)
-- Conversation Generation Tool (Open AI)
-- Music Generation Tool (Replicate AI)
-- Page loading state
-- Stripe monthly subscription
-- Free tier with API limiting
-- How to write POST, DELETE, and GET routes in route handlers (app/api)
-- How to fetch data in server react components by directly accessing database (WITHOUT API! like Magic!)
-- How to handle relations between Server and Child components!
-- How to reuse layouts
-
-### Prerequisites
-
-**Node version 18.x.x**
-
-### Cloning the repository
-
-```shell
-git clone https://github.com/GideonOdiokine/next13-ai-saas.git
-```
-
-### Install packages
+### パッケージのインストール
 
 ```shell
 npm i
-```
+````
 
-### Setup .env file
+### .env ファイルの設定
 
 ```js
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
-CLERK_SECRET_KEY=
-
-NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
-NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
-NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard
-NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/dashboard
-
-OPENAI_API_KEY=
-REPLICATE_API_TOKEN=
-
-DATABASE_URL=
-
-STRIPE_API_KEY=
-STRIPE_WEBHOOK_SECRET=
-
-NEXT_PUBLIC_APP_URL="http://localhost:3000"
+OPENAI_API_KEY = NEXT_PUBLIC_APP_URL = "http://localhost:3000";
 ```
 
-### Setup Prisma
+### Prisma の設定
 
-Add MySQL Database (I used PlanetScale)
+MySQL データベースを追加（PlanetScale を使用）
 
 ```shell
 npx prisma db push
-
 ```
 
-### Start the app
+### アプリの起動
 
 ```shell
 npm run dev
 ```
 
-## Available commands
+## 利用可能なコマンド
 
-Running commands with npm `npm run [command]`
+npm を使用してコマンドを実行 `npm run [command]`
 
-| command         | description                              |
-| :-------------- | :--------------------------------------- |
-| `dev`           | Starts a development instance of the app |
+| コマンド | 説明                           |
+| :------- | :----------------------------- |
+| `dev`    | アプリの開発インスタンスを起動 |
+
+## フォルダ構成
+
+ai-saas/
+├── app/
+│ ├── (dashboard)/
+│ │ ├── page.tsx
+│ │ └── layout.tsx
+│ ├── (landing)/
+│ │ ├── page.tsx
+│ │ └── layout.tsx
+│ ├── api/
+│ │ └── route.ts
+│ └── layout.tsx
+├── components/
+│ ├── modal-provider.tsx
+│ └── toaster-provider.tsx
+├── public/
+│ └── ...
+├── styles/
+│ └── globals.css
+├── README.md
+└── package.json
+
 # next13-ai-saas
