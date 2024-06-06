@@ -17,7 +17,7 @@ export const LandingNavbar = () => {
           <Image fill alt="Logo" src="/logo.png" />
         </div>
         <h1 className={cn("text-2xl font-bold text-white", font.className)}>
-          Genius
+          AI platform
         </h1>
       </Link>
       <div className="flex items-center gap-x-2">
