@@ -1,4 +1,4 @@
-# Next.js 13、React、Tailwind、Prisma、Stripe を使用した SaaS AI プラットフォームの構築
+# Next.js 13、React、TypeScript を使用した SaaS AI プラットフォームの構築
 
 Next.js（フルスタック）13 を使用した SaaS AI プラットフォーム。
 
@@ -17,15 +17,8 @@ npm i
 ### .env ファイルの設定
 
 ```js
-OPENAI_API_KEY = NEXT_PUBLIC_APP_URL = "http://localhost:3000";
-```
-
-### Prisma の設定
-
-MySQL データベースを追加（PlanetScale を使用）
-
-```shell
-npx prisma db push
+OPENAI_API_KEY = "XXXXXXXXXXXXXXXXXXXXXXXXXX";
+NEXT_PUBLIC_APP_URL = "http://localhost:3000";
 ```
 
 ### アプリの起動
@@ -44,25 +37,37 @@ npm を使用してコマンドを実行 `npm run [command]`
 
 ## フォルダ構成
 
-ai-saas/
-├── app/
-│ ├── (dashboard)/
-│ │ ├── page.tsx
-│ │ └── layout.tsx
-│ ├── (landing)/
-│ │ ├── page.tsx
-│ │ └── layout.tsx
-│ ├── api/
-│ │ └── route.ts
-│ └── layout.tsx
-├── components/
-│ ├── modal-provider.tsx
-│ └── toaster-provider.tsx
-├── public/
-│ └── ...
-├── styles/
-│ └── globals.css
-├── README.md
-└── package.json
+### app フォルダ
 
-# next13-ai-saas
+`app` フォルダは、アプリケーションの主要なレイアウトとページを含むディレクトリです。以下はその詳細です：
+
+- **(main)**: メインページ内のコンテンツとレイアウトを含むフォルダです。(main)直下や(routes)フォルダ内の各フォルダで各種コンテンツを構成している。
+
+- **(landing)**: ランディングページ関連のファイルを含むフォルダ。
+
+- **api**: API ルートを含むフォルダ。
+
+### components フォルダ
+
+`components` フォルダは、アプリケーション内で再利用可能な UI コンポーネントを格納するディレクトリです。これらのコンポーネントは、アプリケーションの異なる部分で使用され、コードの再利用性と保守性を向上させます。
+
+### lib フォルダ
+
+`lib` フォルダは、TypeScript コンパイラが使用するライブラリファイルを指定します。これにより、特定の環境や機能セットに対応する型定義が含まれます。
+
+### public フォルダ
+
+`public` フォルダは、Next.js アプリケーションの静的ファイル（画像、フォント、その他の静的アセット）を格納するディレクトリです。このフォルダ内のファイルは、アプリケーションのルート URL から直接アクセスできます。
+<br>
+例えば、public フォルダに logo.png というファイルがある場合、ブラウザから http://localhost:3000/logo.png でアクセスできます。
+<br>
+public フォルダの使用例：
+<br>
+
+- 画像ファイル: アプリケーション内で使用するロゴやアイコンなどの画像ファイル。
+  <br>
+- フォントファイル: カスタムフォントをホストするためのファイル。
+  <br>
+- その他の静的アセット: robots.txt や sitemap.xml などのファイル。
+  <br>
+  これにより、アプリケーションのビルドやデプロイ時に静的アセットが正しく提供されるようになります。
