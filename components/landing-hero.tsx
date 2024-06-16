@@ -20,7 +20,7 @@ export const LandingHero = () => {
         </div>
       </div>
       <div>
-        <Link href={"/dashboard"}>
+        <Link href={"/workspace"}>
           <Button className="md:text-lg p-4 md:p-6 rounded-full font-semibold">
             始める
           </Button>

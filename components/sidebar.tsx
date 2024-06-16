@@ -13,8 +13,14 @@ const routes = [
   {
     label: "ワークスペース",
     icon: LayoutDashboard,
-    href: "/dashboard",
+    href: "/workspace",
     color: "text-sky-500",
+  },
+  {
+    label: "レイアウトカスタム",
+    icon: LayoutDashboard,
+    href: "/custom",
+    color: "text-yellow-500",
   },
   {
     label: "ファイル要約",
