@@ -29,7 +29,26 @@ interface FileInputProps {
   handleUpload: () => void;
 }
 
-const Box: FC<BoxProps> = ({ id, text, width, height, top, left, moveBox }) => {
+const Box: FC<
+  BoxProps & {
+    query: string;
+    setQuery: React.Dispatch<React.SetStateAction<string>>;
+    handleAsk: () => void;
+    answer: string;
+  }
+> = ({
+  id,
+  text,
+  width,
+  height,
+  top,
+  left,
+  moveBox,
+  query,
+  setQuery,
+  handleAsk,
+  answer,
+}) => {
   const [, ref] = useDrag({
     type: ItemTypes.BOX,
     item: { id, left, top },
@@ -60,9 +79,34 @@ const Box: FC<BoxProps> = ({ id, text, width, height, top, left, moveBox }) => {
         height,
       }}
     >
-      {text}
+      {text === "チャット入力" ? (
+        <div>
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="入力"
+          />
+          <button onClick={handleAsk}>クリック</button>
+          {answer && <p>回答: {answer}</p>}
+        </div>
+      ) : text === "応答画面" ? (
+        <div>
+          <p>回答: {answer}</p>
+        </div>
+      ) : (
+        text
+      )}
     </div>
   );
+};
+
+const handleAsk = async (
+  query: string,
+  setAnswer: React.Dispatch<React.SetStateAction<string>>
+) => {
+  const response = await askQuestion(query);
+  setAnswer(response.answer.result);
 };
 
 const FileInput: FC<FileInputProps> = ({
@@ -186,9 +230,8 @@ const Container = () => {
     }
   };
 
-  const handleAsk = async () => {
-    const response = await askQuestion(query);
-    setAnswer(response.answer.result);
+  const handleAskWrapper = async () => {
+    await handleAsk(query, setAnswer);
   };
 
   return (
@@ -203,6 +246,10 @@ const Container = () => {
           top={box.top}
           left={box.left}
           moveBox={moveBox}
+          query={query}
+          setQuery={setQuery}
+          handleAsk={handleAskWrapper}
+          answer={answer}
         />
       ))}
       {fileInputs.map((fileInput) => (
@@ -224,10 +271,6 @@ const Container = () => {
           +
         </button>
         <button onClick={removeBox}>-</button>
-        <button onClick={addFileInput} style={{ marginLeft: "5px" }}>
-          ファイル入力追加
-        </button>
-        <button onClick={removeFileInput}>ファイル入力削除</button>
       </div>
       {showPopup && (
         <div
@@ -323,24 +366,6 @@ const Container = () => {
           >
             キャンセル
           </button>
-        </div>
-      )}
-      {newBoxText === "ファイル入力" && (
-        <div style={{ position: "fixed", bottom: "10px", right: "10px" }}>
-          <input type="file" onChange={handleFileChange} />
-          <button onClick={handleUpload}>アップロード</button>
-        </div>
-      )}
-      {newBoxText === "チャット入力" && (
-        <div style={{ position: "fixed", bottom: "50px", right: "10px" }}>
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="質問を入力してください"
-          />
-          <button onClick={handleAsk}>質問する</button>
-          {answer && <p>回答: {answer}</p>}
         </div>
       )}
     </div>
