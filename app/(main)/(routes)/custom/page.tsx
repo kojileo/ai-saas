@@ -3,9 +3,11 @@
 import React, { useState, FC } from "react";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
+import { uploadPdf, askQuestion } from "@/app/api/custom/route";
 
 const ItemTypes = {
   BOX: "box",
+  FILE_INPUT: "fileInput",
 };
 
 interface BoxProps {
@@ -18,7 +20,35 @@ interface BoxProps {
   moveBox: (id: number, left: number, top: number) => void;
 }
 
-const Box: FC<BoxProps> = ({ id, text, width, height, top, left, moveBox }) => {
+interface FileInputProps {
+  id: number;
+  top: number;
+  left: number;
+  moveFileInput: (id: number, left: number, top: number) => void;
+  handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleUpload: () => void;
+}
+
+const Box: FC<
+  BoxProps & {
+    query: string;
+    setQuery: React.Dispatch<React.SetStateAction<string>>;
+    handleAsk: () => void;
+    answer: string;
+  }
+> = ({
+  id,
+  text,
+  width,
+  height,
+  top,
+  left,
+  moveBox,
+  query,
+  setQuery,
+  handleAsk,
+  answer,
+}) => {
   const [, ref] = useDrag({
     type: ItemTypes.BOX,
     item: { id, left, top },
@@ -49,13 +79,82 @@ const Box: FC<BoxProps> = ({ id, text, width, height, top, left, moveBox }) => {
         height,
       }}
     >
-      {text}
+      {text === "チャット入力" ? (
+        <div>
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="入力"
+          />
+          <button onClick={handleAsk}>クリック</button>
+          {answer && <p>回答: {answer}</p>}
+        </div>
+      ) : text === "応答画面" ? (
+        <div>
+          <p>回答: {answer}</p>
+        </div>
+      ) : (
+        text
+      )}
+    </div>
+  );
+};
+
+const handleAsk = async (
+  query: string,
+  setAnswer: React.Dispatch<React.SetStateAction<string>>
+) => {
+  const response = await askQuestion(query);
+  setAnswer(response.answer.result);
+};
+
+const FileInput: FC<FileInputProps> = ({
+  id,
+  top,
+  left,
+  moveFileInput,
+  handleFileChange,
+  handleUpload,
+}) => {
+  const [, ref] = useDrag({
+    type: ItemTypes.FILE_INPUT,
+    item: { id, left, top },
+  });
+
+  const [, drop] = useDrop({
+    accept: ItemTypes.FILE_INPUT,
+    hover: (item: { id: number; left: number; top: number }, monitor) => {
+      const delta = monitor.getDifferenceFromInitialOffset();
+      if (delta) {
+        const newLeft = Math.round(item.left + delta.x);
+        const newTop = Math.round(item.top + delta.y);
+        moveFileInput(item.id, newLeft, newTop);
+      }
+    },
+  });
+
+  return (
+    <div
+      ref={(node) => ref(drop(node))}
+      style={{
+        position: "absolute",
+        top,
+        left,
+        padding: "8px",
+        border: "1px solid black",
+        backgroundColor: "white",
+      }}
+    >
+      <input type="file" onChange={handleFileChange} />
+      <button onClick={handleUpload}>アップロード</button>
     </div>
   );
 };
 
 const Container = () => {
-  const [boxes, setBoxes] = useState<BoxProps[]>([]); // 型を明示的に指定
+  const [boxes, setBoxes] = useState<BoxProps[]>([]);
+  const [fileInputs, setFileInputs] = useState<FileInputProps[]>([]);
   const [showPopup, setShowPopup] = useState(false);
   const [newBoxSize, setNewBoxSize] = useState({
     width: 100,
@@ -64,10 +163,21 @@ const Container = () => {
     left: 0,
   });
   const [newBoxText, setNewBoxText] = useState("チャット入力");
+  const [file, setFile] = useState<File | null>(null);
+  const [query, setQuery] = useState("");
+  const [answer, setAnswer] = useState("");
 
   const moveBox = (id: number, left: number, top: number) => {
     setBoxes((prevBoxes) =>
       prevBoxes.map((box) => (box.id === id ? { ...box, left, top } : box))
+    );
+  };
+
+  const moveFileInput = (id: number, left: number, top: number) => {
+    setFileInputs((prevFileInputs) =>
+      prevFileInputs.map((fileInput) =>
+        fileInput.id === id ? { ...fileInput, left, top } : fileInput
+      )
     );
   };
 
@@ -77,14 +187,51 @@ const Container = () => {
       id: newId,
       text: newBoxText,
       ...newBoxSize,
-      moveBox: moveBox, // moveBox added
+      moveBox: moveBox,
     };
     setBoxes([...boxes, newBox]);
     setShowPopup(false);
   };
 
+  const addFileInput = () => {
+    const newId = fileInputs.length
+      ? fileInputs[fileInputs.length - 1].id + 1
+      : 1;
+    const newFileInput: FileInputProps = {
+      id: newId,
+      top: 0,
+      left: 0,
+      moveFileInput: moveFileInput,
+      handleFileChange: handleFileChange,
+      handleUpload: handleUpload,
+    };
+    setFileInputs([...fileInputs, newFileInput]);
+    setShowPopup(false);
+  };
+
   const removeBox = () => {
     setBoxes(boxes.slice(0, -1));
+  };
+
+  const removeFileInput = () => {
+    setFileInputs(fileInputs.slice(0, -1));
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setFile(e.target.files[0]);
+    }
+  };
+
+  const handleUpload = async () => {
+    if (file) {
+      const response = await uploadPdf(file);
+      console.log(response);
+    }
+  };
+
+  const handleAskWrapper = async () => {
+    await handleAsk(query, setAnswer);
   };
 
   return (
@@ -99,6 +246,21 @@ const Container = () => {
           top={box.top}
           left={box.left}
           moveBox={moveBox}
+          query={query}
+          setQuery={setQuery}
+          handleAsk={handleAskWrapper}
+          answer={answer}
+        />
+      ))}
+      {fileInputs.map((fileInput) => (
+        <FileInput
+          key={fileInput.id}
+          id={fileInput.id}
+          top={fileInput.top}
+          left={fileInput.left}
+          moveFileInput={moveFileInput}
+          handleFileChange={fileInput.handleFileChange}
+          handleUpload={fileInput.handleUpload}
         />
       ))}
       <div style={{ position: "fixed", bottom: "10px", left: "300px" }}>
@@ -168,7 +330,10 @@ const Container = () => {
               type="number"
               value={newBoxSize.left}
               onChange={(e) =>
-                setNewBoxSize({ ...newBoxSize, left: parseInt(e.target.value) })
+                setNewBoxSize({
+                  ...newBoxSize,
+                  left: parseInt(e.target.value),
+                })
               }
             />
           </label>
@@ -186,7 +351,7 @@ const Container = () => {
           </label>
           <br />
           <button
-            onClick={addBox}
+            onClick={newBoxText === "ファイル入力" ? addFileInput : addBox}
             style={{
               backgroundColor: "green",
               color: "white",
