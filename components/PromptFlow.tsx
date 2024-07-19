@@ -72,12 +72,12 @@ const PromptFlow = () => {
     setSelectedNode(node as NodeType);
   };
 
-  const handleAddNode = () => {
+  const handleAddNode = (type: string) => {
     const newNode: NodeType = {
       id: (nodes.length + 1).toString(),
       data: { label: `New Node ${nodes.length + 1}` },
       position: { x: 250, y: nodes.length * 100 + 50 },
-      type: "default",
+      type: type,
     };
     setNodes([...nodes, newNode]);
   };
@@ -111,8 +111,17 @@ const PromptFlow = () => {
             {node.data.label}
           </div>
         ))}
-        <Button onClick={handleAddNode} className="mt-4 w-full">
-          <Plus className="mr-2 h-4 w-4" /> Add Node
+        <Button
+          onClick={() => handleAddNode("default")}
+          className="mt-4 w-full"
+        >
+          <Plus className="mr-2 h-4 w-4" /> Add Default Node
+        </Button>
+        <Button onClick={() => handleAddNode("input")} className="mt-4 w-full">
+          <Plus className="mr-2 h-4 w-4" /> Add Input Node
+        </Button>
+        <Button onClick={() => handleAddNode("output")} className="mt-4 w-full">
+          <Plus className="mr-2 h-4 w-4" /> Add Output Node
         </Button>
         <Button onClick={handleDeleteNode} className="mt-4 w-full">
           <Plus className="mr-2 h-4 w-4" /> Delete Node
