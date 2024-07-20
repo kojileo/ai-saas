@@ -33,7 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import Textarea from "@/components/ui/textarea"; // 修正
+import Textarea from "@/components/ui/textarea";
 
 type NodeType = ReactFlowNode & {
   type: string;
@@ -51,15 +51,6 @@ const initialNodes: NodeType[] = [
     position: { x: 250, y: 5 },
   },
   {
-    id: "1",
-    type: "default",
-    data: { label: "ファイル要約" },
-    position: { x: 250, y: 100 },
-    nodeFunction: "summarize",
-    inputType: "file",
-    outputType: "text",
-  },
-  {
     id: "end",
     type: "output",
     data: { label: "終了" },
@@ -73,20 +64,16 @@ const initialEdges = [
 ];
 
 const nodeFunctions = [
-  { value: "summarize", label: "ファイル要約" },
-  { value: "chat", label: "チャットボット" },
-  { value: "branch", label: "条件分岐" },
-  { value: "fileOps", label: "ファイル操作" },
-];
-
-const inputTypes = [
-  { value: "file", label: "ファイル" },
-  { value: "text", label: "テキスト" },
-];
-
-const outputTypes = [
-  { value: "text", label: "テキスト" },
-  { value: "file", label: "ファイル" },
+  { value: "input", label: "入力" },
+  { value: "output", label: "出力" },
+  { value: "prompt", label: "プロンプト" },
+  { value: "llmProcess", label: "LLM処理" },
+  { value: "textProcess", label: "テキスト処理" },
+  { value: "conditionalBranch", label: "条件分岐" },
+  { value: "merge", label: "マージ" },
+  { value: "loop", label: "ループ" },
+  { value: "dataFetch", label: "データ取得" },
+  { value: "dataStore", label: "データ保存" },
 ];
 
 const PromptFlow = () => {
@@ -323,7 +310,7 @@ const PromptFlow = () => {
       {/* Main Content */}
       <div className="flex-1 p-4">
         <div className="mb-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold">LLM Prompt Flow</h1>
+          <h1 className="text-2xl font-bold">ワークスペース</h1>
           <div>
             <Button variant="outline" className="mr-2">
               <Save className="mr-2 h-4 w-4" /> 保存
@@ -398,9 +385,6 @@ const PromptFlow = () => {
                 </Select>
               </div>
               {renderNodeConfig()}
-              <Button variant="outline" className="w-full">
-                <Settings className="mr-2 h-4 w-4" /> 詳細設定
-              </Button>
             </>
           )}
         </div>
