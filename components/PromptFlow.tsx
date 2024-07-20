@@ -83,6 +83,7 @@ const PromptFlow = () => {
   const [newNodeFunction, setNewNodeFunction] = useState<
     "summarize" | "chat" | "branch" | "fileOps"
   >("summarize");
+  const [apiEndpoint, setApiEndpoint] = useState<string | null>(null);
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) =>
@@ -177,6 +178,10 @@ const PromptFlow = () => {
       setNodes(updatedNodes);
       setSelectedNode({ ...selectedNode, [property]: value });
     }
+  };
+
+  const handleExecute = () => {
+    setApiEndpoint("https://api.example.com/execute");
   };
 
   const renderNodeConfig = () => {
@@ -312,10 +317,7 @@ const PromptFlow = () => {
         <div className="mb-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold">ワークスペース</h1>
           <div>
-            <Button variant="outline" className="mr-2">
-              <Save className="mr-2 h-4 w-4" /> 保存
-            </Button>
-            <Button>
+            <Button onClick={handleExecute}>
               <Play className="mr-2 h-4 w-4" /> 実行
             </Button>
           </div>
@@ -336,6 +338,13 @@ const PromptFlow = () => {
             <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
           </ReactFlow>
         </div>
+
+        {/* API Endpoint Display */}
+        {apiEndpoint && (
+          <div className="mt-4 p-4 bg-blue-100 border border-blue-300 rounded">
+            <p>APIエンドポイント: {apiEndpoint}</p>
+          </div>
+        )}
       </div>
 
       {/* Right Sidebar */}
