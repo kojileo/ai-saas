@@ -13,42 +13,89 @@ import ReactFlow, {
   BackgroundVariant,
 } from "reactflow";
 import "reactflow/dist/style.css";
-import { ChevronRight, Plus, Save, Play, Settings } from "lucide-react";
+import {
+  ChevronRight,
+  Plus,
+  Save,
+  Play,
+  Settings,
+  Upload,
+  MessageSquare,
+  FileText,
+  GitBranch,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import Textarea from "@/components/ui/textarea"; // 修正
 
-type NodeType = ReactFlowNode & { type: string };
+type NodeType = ReactFlowNode & {
+  type: string;
+  nodeFunction?: "summarize" | "chat" | "branch" | "fileOps";
+  inputType?: string;
+  outputType?: string;
+  config?: any;
+};
 
 const initialNodes: NodeType[] = [
   {
-    id: "1",
-    data: { label: "User Input" },
-    position: { x: 250, y: 5 },
+    id: "start",
     type: "input",
+    data: { label: "開始" },
+    position: { x: 250, y: 5 },
   },
   {
-    id: "2",
-    data: { label: "LLM Processing" },
-    position: { x: 250, y: 100 },
+    id: "1",
     type: "default",
+    data: { label: "ファイル要約" },
+    position: { x: 250, y: 100 },
+    nodeFunction: "summarize",
+    inputType: "file",
+    outputType: "text",
   },
   {
-    id: "3",
-    data: { label: "Final Output" },
-    position: { x: 250, y: 200 },
+    id: "end",
     type: "output",
+    data: { label: "終了" },
+    position: { x: 250, y: 200 },
   },
 ];
 
 const initialEdges = [
-  { id: "e1-2", source: "1", target: "2" },
-  { id: "e2-3", source: "2", target: "3" },
+  { id: "e-start-1", source: "start", target: "1" },
+  { id: "e1-end", source: "1", target: "end" },
+];
+
+const nodeFunctions = [
+  { value: "summarize", label: "ファイル要約" },
+  { value: "chat", label: "チャットボット" },
+  { value: "branch", label: "条件分岐" },
+  { value: "fileOps", label: "ファイル操作" },
+];
+
+const inputTypes = [
+  { value: "file", label: "ファイル" },
+  { value: "text", label: "テキスト" },
+];
+
+const outputTypes = [
+  { value: "text", label: "テキスト" },
+  { value: "file", label: "ファイル" },
 ];
 
 const PromptFlow = () => {
   const [nodes, setNodes] = useState<NodeType[]>(initialNodes);
   const [edges, setEdges] = useState(initialEdges);
   const [selectedNode, setSelectedNode] = useState<NodeType | null>(null);
+  const [newNodeFunction, setNewNodeFunction] = useState<
+    "summarize" | "chat" | "branch" | "fileOps"
+  >("summarize");
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) =>
@@ -72,26 +119,155 @@ const PromptFlow = () => {
     setSelectedNode(node as NodeType);
   };
 
-  const handleAddNode = (type: string) => {
+  const handleAddNode = () => {
     const newNode: NodeType = {
-      id: (nodes.length + 1).toString(),
-      data: { label: `New Node ${nodes.length + 1}` },
-      position: { x: 250, y: nodes.length * 100 + 50 },
-      type: type,
+      id: (nodes.length - 1).toString(),
+      data: {
+        label:
+          nodeFunctions.find((f) => f.value === newNodeFunction)?.label ||
+          "新規ノード",
+      },
+      position: { x: 250, y: (nodes.length - 1) * 100 },
+      type: "default",
+      nodeFunction: newNodeFunction,
+      inputType: newNodeFunction === "summarize" ? "file" : "text",
+      outputType: newNodeFunction === "fileOps" ? "file" : "text",
     };
-    setNodes([...nodes, newNode]);
+
+    const newNodes = [...nodes.slice(0, -1), newNode, nodes[nodes.length - 1]];
+    setNodes(newNodes);
+
+    const newEdges = [
+      ...edges.filter((edge) => edge.target !== "end"),
+      {
+        id: `e${newNode.id}-${nodes.length - 1}`,
+        source: newNode.id,
+        target: "end",
+      },
+      {
+        id: `e${nodes.length - 2}-${newNode.id}`,
+        source: (nodes.length - 2).toString(),
+        target: newNode.id,
+      },
+    ];
+    setEdges(newEdges);
   };
 
   const handleDeleteNode = () => {
-    if (selectedNode) {
-      setNodes((nds) => nds.filter((node) => node.id !== selectedNode.id));
-      setEdges((eds) =>
-        eds.filter(
-          (edge) =>
-            edge.source !== selectedNode.id && edge.target !== selectedNode.id
-        )
+    if (
+      selectedNode &&
+      selectedNode.id !== "start" &&
+      selectedNode.id !== "end"
+    ) {
+      const selectedIndex = nodes.findIndex(
+        (node) => node.id === selectedNode.id
       );
+      const newNodes = nodes.filter((node) => node.id !== selectedNode.id);
+
+      const newEdges = edges.filter(
+        (edge) =>
+          edge.source !== selectedNode.id && edge.target !== selectedNode.id
+      );
+      if (selectedIndex > 0 && selectedIndex < nodes.length - 1) {
+        newEdges.push({
+          id: `e${nodes[selectedIndex - 1].id}-${nodes[selectedIndex + 1].id}`,
+          source: nodes[selectedIndex - 1].id,
+          target: nodes[selectedIndex + 1].id,
+        });
+      }
+
+      setNodes(newNodes);
+      setEdges(newEdges);
       setSelectedNode(null);
+    }
+  };
+
+  const handleNodePropertyChange = (property: string, value: any) => {
+    if (selectedNode) {
+      const updatedNodes = nodes.map((node) =>
+        node.id === selectedNode.id ? { ...node, [property]: value } : node
+      );
+      setNodes(updatedNodes);
+      setSelectedNode({ ...selectedNode, [property]: value });
+    }
+  };
+
+  const renderNodeConfig = () => {
+    if (!selectedNode) return null;
+
+    switch (selectedNode.nodeFunction) {
+      case "summarize":
+        return (
+          <div className="mb-4">
+            <Button variant="outline" className="w-full">
+              <Upload className="mr-2 h-4 w-4" /> ファイルをアップロード
+            </Button>
+          </div>
+        );
+      case "chat":
+        return (
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700">
+              チャットプロンプト
+            </label>
+            <Textarea
+              placeholder="チャットボットの初期プロンプトを入力"
+              value={selectedNode.config?.prompt || ""}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                handleNodePropertyChange("config", {
+                  ...selectedNode.config,
+                })
+              }
+            />
+          </div>
+        );
+      case "branch":
+        return (
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700">
+              条件式
+            </label>
+            <Input
+              placeholder="条件式を入力 (例: length > 100)"
+              className="mt-1"
+              value={selectedNode.config?.condition || ""}
+              onChange={(e) =>
+                handleNodePropertyChange("config", {
+                  ...selectedNode.config,
+                  condition: e.target.value,
+                })
+              }
+            />
+          </div>
+        );
+      case "fileOps":
+        return (
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700">
+              操作タイプ
+            </label>
+            <Select
+              onValueChange={(value) =>
+                handleNodePropertyChange("config", {
+                  ...selectedNode.config,
+                  operation: value,
+                })
+              }
+              defaultValue={selectedNode.config?.operation || "read"}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="操作タイプを選択" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="read">読み込み</SelectItem>
+                <SelectItem value="write">書き込み</SelectItem>
+                <SelectItem value="append">追記</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        );
+      default:
+        return null;
     }
   };
 
@@ -99,45 +275,61 @@ const PromptFlow = () => {
     <div className="flex h-screen bg-gray-100">
       {/* Left Sidebar */}
       <div className="w-64 bg-white border-r p-4">
-        <h2 className="text-xl font-bold mb-4">Nodes</h2>
+        <h2 className="text-xl font-bold mb-4">ノード</h2>
         {nodes.map((node) => (
           <div
             key={node.id}
             className={`p-2 mb-2 rounded cursor-pointer ${
               selectedNode === node ? "bg-blue-100" : "hover:bg-gray-100"
-            }`}
+            } ${node.id === "start" || node.id === "end" ? "font-bold" : ""}`}
             onClick={() => setSelectedNode(node)}
           >
             {node.data.label}
           </div>
         ))}
-        <Button
-          onClick={() => handleAddNode("default")}
-          className="mt-4 w-full"
+        <Select
+          onValueChange={(value: "summarize" | "chat" | "branch" | "fileOps") =>
+            setNewNodeFunction(value)
+          }
+          defaultValue={newNodeFunction}
         >
-          <Plus className="mr-2 h-4 w-4" /> Add Default Node
+          <SelectTrigger className="w-full mb-2">
+            <SelectValue placeholder="ノード機能を選択" />
+          </SelectTrigger>
+          <SelectContent>
+            {nodeFunctions.map((func) => (
+              <SelectItem key={func.value} value={func.value}>
+                {func.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button onClick={handleAddNode} className="mt-2 w-full">
+          <Plus className="mr-2 h-4 w-4" /> ノードを追加
         </Button>
-        <Button onClick={() => handleAddNode("input")} className="mt-4 w-full">
-          <Plus className="mr-2 h-4 w-4" /> Add Input Node
-        </Button>
-        <Button onClick={() => handleAddNode("output")} className="mt-4 w-full">
-          <Plus className="mr-2 h-4 w-4" /> Add Output Node
-        </Button>
-        <Button onClick={handleDeleteNode} className="mt-4 w-full">
-          <Plus className="mr-2 h-4 w-4" /> Delete Node
+        <Button
+          onClick={handleDeleteNode}
+          className="mt-4 w-full"
+          disabled={
+            !selectedNode ||
+            selectedNode.id === "start" ||
+            selectedNode.id === "end"
+          }
+        >
+          <Plus className="mr-2 h-4 w-4" /> ノードを削除
         </Button>
       </div>
 
       {/* Main Content */}
       <div className="flex-1 p-4">
         <div className="mb-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Prompt Flow</h1>
+          <h1 className="text-2xl font-bold">LLM Prompt Flow</h1>
           <div>
             <Button variant="outline" className="mr-2">
-              <Save className="mr-2 h-4 w-4" /> Save
+              <Save className="mr-2 h-4 w-4" /> 保存
             </Button>
             <Button>
-              <Play className="mr-2 h-4 w-4" /> Run
+              <Play className="mr-2 h-4 w-4" /> 実行
             </Button>
           </div>
         </div>
@@ -162,37 +354,55 @@ const PromptFlow = () => {
       {/* Right Sidebar */}
       {selectedNode && (
         <div className="w-80 bg-white border-l p-4">
-          <h2 className="text-xl font-bold mb-4">Node Properties</h2>
+          <h2 className="text-xl font-bold mb-4">ノードプロパティ</h2>
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700">
-              Name
+              名前
             </label>
             <Input
               value={selectedNode.data.label}
-              onChange={(e) => {
-                const updatedNodes = nodes.map((node) =>
-                  node.id === selectedNode.id
-                    ? { ...node, data: { ...node.data, label: e.target.value } }
-                    : node
-                );
-                setNodes(updatedNodes);
-                setSelectedNode({
-                  ...selectedNode,
-                  data: { ...selectedNode.data, label: e.target.value },
-                });
-              }}
+              onChange={(e) =>
+                handleNodePropertyChange("data", {
+                  ...selectedNode.data,
+                  label: e.target.value,
+                })
+              }
               className="mt-1"
+              disabled={
+                selectedNode.id === "start" || selectedNode.id === "end"
+              }
             />
           </div>
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700">
-              Type
-            </label>
-            <Input value={selectedNode.type} readOnly className="mt-1" />
-          </div>
-          <Button variant="outline" className="w-full">
-            <Settings className="mr-2 h-4 w-4" /> Configure
-          </Button>
+          {selectedNode.id !== "start" && selectedNode.id !== "end" && (
+            <>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700">
+                  ノード機能
+                </label>
+                <Select
+                  onValueChange={(
+                    value: "summarize" | "chat" | "branch" | "fileOps"
+                  ) => handleNodePropertyChange("nodeFunction", value)}
+                  defaultValue={selectedNode.nodeFunction}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="ノード機能を選択" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {nodeFunctions.map((func) => (
+                      <SelectItem key={func.value} value={func.value}>
+                        {func.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {renderNodeConfig()}
+              <Button variant="outline" className="w-full">
+                <Settings className="mr-2 h-4 w-4" /> 詳細設定
+              </Button>
+            </>
+          )}
         </div>
       )}
     </div>
