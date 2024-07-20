@@ -34,6 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import Textarea from "@/components/ui/textarea";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 type NodeType = ReactFlowNode & {
   type: string;
@@ -83,7 +84,9 @@ const PromptFlow = () => {
   const [newNodeFunction, setNewNodeFunction] = useState<
     "summarize" | "chat" | "branch" | "fileOps"
   >("summarize");
-  const [apiEndpoint, setApiEndpoint] = useState<string | null>(null);
+  const [apiEndpoint, setApiEndpoint] = useState("");
+  const [executionResult, setExecutionResult] = useState(null);
+  const [executionError, setExecutionError] = useState(null);
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) =>
@@ -180,10 +183,6 @@ const PromptFlow = () => {
     }
   };
 
-  const handleExecute = () => {
-    setApiEndpoint("https://api.example.com/execute");
-  };
-
   const renderNodeConfig = () => {
     if (!selectedNode) return null;
 
@@ -263,6 +262,35 @@ const PromptFlow = () => {
     }
   };
 
+  const handleExecute = async () => {
+    setApiEndpoint("http://localhost:8000/execute");
+    setExecutionResult(null);
+    setExecutionError(null);
+
+    try {
+      const response = await fetch("http://localhost:8000/execute", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ nodes, edges }),
+      });
+
+      if (!response.ok) {
+        throw new Error("API request failed");
+      }
+
+      const data = await response.json();
+      setExecutionResult(data.result);
+    } catch (error) {
+      console.error("Error executing prompt flow:", error as Error);
+
+      setExecutionError(
+        error instanceof Error ? error.message : (String(error) as any)
+      );
+    }
+  };
+
   return (
     <div className="flex h-screen bg-gray-100">
       {/* Left Sidebar */}
@@ -313,7 +341,7 @@ const PromptFlow = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 p-4">
+      <div className="flex-1 p-4 overflow-y-auto">
         <div className="mb-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold">ワークスペース</h1>
           <div>
@@ -344,6 +372,26 @@ const PromptFlow = () => {
           <div className="mt-4 p-4 bg-blue-100 border border-blue-300 rounded">
             <p>APIエンドポイント: {apiEndpoint}</p>
           </div>
+        )}
+
+        {/* Execution Result Display */}
+        {executionResult && (
+          <Alert className="mt-4">
+            <AlertTitle>実行結果</AlertTitle>
+            <AlertDescription>
+              <pre className="whitespace-pre-wrap">
+                {JSON.stringify(executionResult, null, 2)}
+              </pre>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Execution Error Display */}
+        {executionError && (
+          <Alert className="mt-4" variant="destructive">
+            <AlertTitle>エラー</AlertTitle>
+            <AlertDescription>{executionError}</AlertDescription>
+          </Alert>
         )}
       </div>
 
