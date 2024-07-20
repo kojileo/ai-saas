@@ -65,16 +65,10 @@ const initialEdges = [
 ];
 
 const nodeFunctions = [
-  { value: "input", label: "入力" },
-  { value: "output", label: "出力" },
-  { value: "prompt", label: "プロンプト" },
-  { value: "llmProcess", label: "LLM処理" },
-  { value: "textProcess", label: "テキスト処理" },
-  { value: "conditionalBranch", label: "条件分岐" },
-  { value: "merge", label: "マージ" },
-  { value: "loop", label: "ループ" },
-  { value: "dataFetch", label: "データ取得" },
-  { value: "dataStore", label: "データ保存" },
+  { value: "summarize", label: "ファイル要約" },
+  { value: "chat", label: "チャットボット" },
+  { value: "branch", label: "条件分岐" },
+  { value: "fileOps", label: "ファイル操作" },
 ];
 
 const PromptFlow = () => {
@@ -111,14 +105,15 @@ const PromptFlow = () => {
   };
 
   const handleAddNode = () => {
+    const newNodeId = (nodes.length + 1).toString();
     const newNode: NodeType = {
-      id: (nodes.length - 1).toString(),
+      id: newNodeId,
       data: {
         label:
           nodeFunctions.find((f) => f.value === newNodeFunction)?.label ||
           "新規ノード",
       },
-      position: { x: 250, y: (nodes.length - 1) * 100 },
+      position: { x: 250, y: nodes.length * 100 },
       type: "default",
       nodeFunction: newNodeFunction,
       inputType: newNodeFunction === "summarize" ? "file" : "text",
@@ -128,17 +123,18 @@ const PromptFlow = () => {
     const newNodes = [...nodes.slice(0, -1), newNode, nodes[nodes.length - 1]];
     setNodes(newNodes);
 
+    const lastNodeId = nodes[nodes.length - 2].id;
     const newEdges = [
       ...edges.filter((edge) => edge.target !== "end"),
       {
-        id: `e${newNode.id}-${nodes.length - 1}`,
-        source: newNode.id,
-        target: "end",
+        id: `e${lastNodeId}-${newNodeId}`,
+        source: lastNodeId,
+        target: newNodeId,
       },
       {
-        id: `e${nodes.length - 2}-${newNode.id}`,
-        source: (nodes.length - 2).toString(),
-        target: newNode.id,
+        id: `e${newNodeId}-end`,
+        source: newNodeId,
+        target: "end",
       },
     ];
     setEdges(newEdges);
@@ -176,10 +172,20 @@ const PromptFlow = () => {
   const handleNodePropertyChange = (property: string, value: any) => {
     if (selectedNode) {
       const updatedNodes = nodes.map((node) =>
-        node.id === selectedNode.id ? { ...node, [property]: value } : node
+        node.id === selectedNode.id
+          ? {
+              ...node,
+              [property]:
+                property === "data" ? { ...node.data, ...value } : value,
+            }
+          : node
       );
       setNodes(updatedNodes);
-      setSelectedNode({ ...selectedNode, [property]: value });
+      setSelectedNode({
+        ...selectedNode,
+        [property]:
+          property === "data" ? { ...selectedNode.data, ...value } : value,
+      });
     }
   };
 
@@ -207,6 +213,7 @@ const PromptFlow = () => {
               onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
                 handleNodePropertyChange("config", {
                   ...selectedNode.config,
+                  prompt: e.target.value,
                 })
               }
             />
