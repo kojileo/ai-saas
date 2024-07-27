@@ -38,9 +38,9 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 type NodeType = ReactFlowNode & {
   type: string;
-  nodeFunction?: "summarize" | "chat" | "branch" | "fileOps";
-  inputType?: string;
-  outputType?: string;
+  nodeFunction?: "summarize" | "chat";
+  inputType?: "text" | "file";
+  outputType?: "text" | "file";
   config?: any;
 };
 
@@ -50,12 +50,14 @@ const initialNodes: NodeType[] = [
     type: "input",
     data: { label: "開始" },
     position: { x: 250, y: 5 },
+    inputType: "text", // 初期値を設定
   },
   {
     id: "end",
     type: "output",
     data: { label: "終了" },
     position: { x: 250, y: 200 },
+    outputType: "text", // 初期値を設定
   },
 ];
 
@@ -65,22 +67,30 @@ const initialEdges = [
 ];
 
 const nodeFunctions = [
-  { value: "summarize", label: "ファイル要約" },
-  { value: "chat", label: "チャットボット" },
-  { value: "branch", label: "条件分岐" },
-  { value: "fileOps", label: "ファイル操作" },
+  { value: "summarize", label: "ファイル要約AI" },
+  { value: "chat", label: "チャットAI" },
+];
+
+const inputTypes = [
+  { value: "text", label: "テキスト" },
+  { value: "file", label: "ファイル" },
+];
+
+const outputTypes = [
+  { value: "text", label: "テキスト" },
+  { value: "file", label: "ファイル" },
 ];
 
 const PromptFlow = () => {
   const [nodes, setNodes] = useState<NodeType[]>(initialNodes);
   const [edges, setEdges] = useState(initialEdges);
   const [selectedNode, setSelectedNode] = useState<NodeType | null>(null);
-  const [newNodeFunction, setNewNodeFunction] = useState<
-    "summarize" | "chat" | "branch" | "fileOps"
-  >("summarize");
+  const [newNodeFunction, setNewNodeFunction] = useState<"summarize" | "chat">(
+    "summarize"
+  );
   const [apiEndpoint, setApiEndpoint] = useState("");
   const [executionResult, setExecutionResult] = useState(null);
-  const [executionError, setExecutionError] = useState(null);
+  const [executionError, setExecutionError] = useState<string | null>(null);
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) =>
@@ -116,8 +126,8 @@ const PromptFlow = () => {
       position: { x: 250, y: nodes.length * 100 },
       type: "default",
       nodeFunction: newNodeFunction,
-      inputType: newNodeFunction === "summarize" ? "file" : "text",
-      outputType: newNodeFunction === "fileOps" ? "file" : "text",
+      inputType: "text",
+      outputType: "text",
     };
 
     const newNodes = [...nodes.slice(0, -1), newNode, nodes[nodes.length - 1]];
@@ -192,80 +202,58 @@ const PromptFlow = () => {
   const renderNodeConfig = () => {
     if (!selectedNode) return null;
 
-    switch (selectedNode.nodeFunction) {
-      case "summarize":
-        return (
-          <div className="mb-4">
-            <Button variant="outline" className="w-full">
-              <Upload className="mr-2 h-4 w-4" /> ファイルをアップロード
-            </Button>
-          </div>
-        );
-      case "chat":
-        return (
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700">
-              チャットプロンプト
-            </label>
-            <Textarea
-              placeholder="チャットボットの初期プロンプトを入力"
-              value={selectedNode.config?.prompt || ""}
-              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                handleNodePropertyChange("config", {
-                  ...selectedNode.config,
-                  prompt: e.target.value,
-                })
-              }
-            />
-          </div>
-        );
-      case "branch":
-        return (
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700">
-              条件式
-            </label>
-            <Input
-              placeholder="条件式を入力 (例: length > 100)"
-              className="mt-1"
-              value={selectedNode.config?.condition || ""}
-              onChange={(e) =>
-                handleNodePropertyChange("config", {
-                  ...selectedNode.config,
-                  condition: e.target.value,
-                })
-              }
-            />
-          </div>
-        );
-      case "fileOps":
-        return (
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700">
-              操作タイプ
-            </label>
-            <Select
-              onValueChange={(value) =>
-                handleNodePropertyChange("config", {
-                  ...selectedNode.config,
-                  operation: value,
-                })
-              }
-              defaultValue={selectedNode.config?.operation || "read"}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="操作タイプを選択" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="read">読み込み</SelectItem>
-                <SelectItem value="write">書き込み</SelectItem>
-                <SelectItem value="append">追記</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        );
-      default:
-        return null;
+    if (selectedNode.id === "start") {
+      return (
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700">
+            入力タイプ
+          </label>
+          <Select
+            onValueChange={(value: "text" | "file") =>
+              handleNodePropertyChange("inputType", value)
+            }
+            defaultValue={selectedNode.inputType}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="入力タイプを選択" />
+            </SelectTrigger>
+            <SelectContent>
+              {inputTypes.map((type) => (
+                <SelectItem key={type.value} value={type.value}>
+                  {type.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      );
+    }
+
+    if (selectedNode.id === "end") {
+      return (
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700">
+            出力タイプ
+          </label>
+          <Select
+            onValueChange={(value: "text" | "file") =>
+              handleNodePropertyChange("outputType", value)
+            }
+            defaultValue={selectedNode.outputType}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="出力タイプを選択" />
+            </SelectTrigger>
+            <SelectContent>
+              {outputTypes.map((type) => (
+                <SelectItem key={type.value} value={type.value}>
+                  {type.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      );
     }
   };
 
@@ -274,13 +262,33 @@ const PromptFlow = () => {
     setExecutionResult(null);
     setExecutionError(null);
 
+    const jsonData = {
+      requestType: "create_api",
+      apiSpecification: {
+        name: "CustomAPI",
+        version: "1.0",
+        type: "chatbot",
+        categories: nodes.map((node) => ({
+          name: node.data.label,
+          type: node.nodeFunction,
+          inputType: node.inputType,
+          outputType: node.outputType,
+          config: node.config,
+        })),
+      },
+      metadata: {
+        requesterId: "frontend-001",
+        timestamp: new Date().toISOString(),
+      },
+    };
+
     try {
       const response = await fetch("http://localhost:8000/execute", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ nodes, edges }),
+        body: JSON.stringify(jsonData),
       });
 
       if (!response.ok) {
@@ -291,10 +299,7 @@ const PromptFlow = () => {
       setExecutionResult(data.result);
     } catch (error) {
       console.error("Error executing prompt flow:", error as Error);
-
-      setExecutionError(
-        error instanceof Error ? error.message : (String(error) as any)
-      );
+      setExecutionError(error instanceof Error ? error.message : String(error));
     }
   };
 
@@ -315,7 +320,7 @@ const PromptFlow = () => {
           </div>
         ))}
         <Select
-          onValueChange={(value: "summarize" | "chat" | "branch" | "fileOps") =>
+          onValueChange={(value: "summarize" | "chat") =>
             setNewNodeFunction(value)
           }
           defaultValue={newNodeFunction}
@@ -419,9 +424,6 @@ const PromptFlow = () => {
                 })
               }
               className="mt-1"
-              disabled={
-                selectedNode.id === "start" || selectedNode.id === "end"
-              }
             />
           </div>
           {selectedNode.id !== "start" && selectedNode.id !== "end" && (
@@ -431,9 +433,9 @@ const PromptFlow = () => {
                   ノード機能
                 </label>
                 <Select
-                  onValueChange={(
-                    value: "summarize" | "chat" | "branch" | "fileOps"
-                  ) => handleNodePropertyChange("nodeFunction", value)}
+                  onValueChange={(value: "summarize" | "chat") =>
+                    handleNodePropertyChange("nodeFunction", value)
+                  }
                   defaultValue={selectedNode.nodeFunction}
                 >
                   <SelectTrigger className="w-full">
@@ -448,9 +450,9 @@ const PromptFlow = () => {
                   </SelectContent>
                 </Select>
               </div>
-              {renderNodeConfig()}
             </>
           )}
+          {renderNodeConfig()}
         </div>
       )}
     </div>
