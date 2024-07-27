@@ -38,10 +38,11 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 type NodeType = ReactFlowNode & {
   type: string;
-  nodeFunction?: "summarize" | "chat";
+  nodeFunction?: "summarize" | "chat" | "model1" | "model2";
   inputType?: "text" | "file";
   outputType?: "text" | "file";
   config?: any;
+  nodeCategory?: "tool" | "model";
 };
 
 const initialNodes: NodeType[] = [
@@ -50,14 +51,12 @@ const initialNodes: NodeType[] = [
     type: "input",
     data: { label: "開始" },
     position: { x: 250, y: 5 },
-    inputType: "text", // 初期値を設定
   },
   {
     id: "end",
     type: "output",
     data: { label: "終了" },
     position: { x: 250, y: 200 },
-    outputType: "text", // 初期値を設定
   },
 ];
 
@@ -66,10 +65,16 @@ const initialEdges = [
   { id: "e1-end", source: "1", target: "end" },
 ];
 
-const nodeFunctions = [
-  { value: "summarize", label: "ファイル要約AI" },
-  { value: "chat", label: "チャットAI" },
-];
+const nodeFunctions = {
+  tool: [
+    { value: "summarize", label: "要約" },
+    { value: "chat", label: "チャット" },
+  ],
+  model: [
+    { value: "model1", label: "モデル1" },
+    { value: "model2", label: "モデル2" },
+  ],
+};
 
 const inputTypes = [
   { value: "text", label: "テキスト" },
@@ -85,8 +90,11 @@ const PromptFlow = () => {
   const [nodes, setNodes] = useState<NodeType[]>(initialNodes);
   const [edges, setEdges] = useState(initialEdges);
   const [selectedNode, setSelectedNode] = useState<NodeType | null>(null);
-  const [newNodeFunction, setNewNodeFunction] = useState<"summarize" | "chat">(
-    "summarize"
+  const [newNodeFunction, setNewNodeFunction] = useState<
+    "summarize" | "chat" | "model1" | "model2"
+  >("summarize");
+  const [newNodeCategory, setNewNodeCategory] = useState<"tool" | "model">(
+    "tool"
   );
   const [apiEndpoint, setApiEndpoint] = useState("");
   const [executionResult, setExecutionResult] = useState(null);
@@ -120,11 +128,13 @@ const PromptFlow = () => {
       id: newNodeId,
       data: {
         label:
-          nodeFunctions.find((f) => f.value === newNodeFunction)?.label ||
-          "新規ノード",
+          nodeFunctions[newNodeCategory].find(
+            (f) => f.value === newNodeFunction
+          )?.label || "新規ノード",
       },
       position: { x: 250, y: nodes.length * 100 },
       type: "default",
+      nodeCategory: newNodeCategory,
       nodeFunction: newNodeFunction,
       inputType: "text",
       outputType: "text",
@@ -202,58 +212,45 @@ const PromptFlow = () => {
   const renderNodeConfig = () => {
     if (!selectedNode) return null;
 
-    if (selectedNode.id === "start") {
-      return (
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700">
-            入力タイプ
-          </label>
-          <Select
-            onValueChange={(value: "text" | "file") =>
-              handleNodePropertyChange("inputType", value)
-            }
-            defaultValue={selectedNode.inputType}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="入力タイプを選択" />
-            </SelectTrigger>
-            <SelectContent>
-              {inputTypes.map((type) => (
-                <SelectItem key={type.value} value={type.value}>
-                  {type.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      );
-    }
-
-    if (selectedNode.id === "end") {
-      return (
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700">
-            出力タイプ
-          </label>
-          <Select
-            onValueChange={(value: "text" | "file") =>
-              handleNodePropertyChange("outputType", value)
-            }
-            defaultValue={selectedNode.outputType}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="出力タイプを選択" />
-            </SelectTrigger>
-            <SelectContent>
-              {outputTypes.map((type) => (
-                <SelectItem key={type.value} value={type.value}>
-                  {type.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      );
+    switch (selectedNode.nodeFunction) {
+      case "summarize":
+        return (
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700">
+              要約プロンプト
+            </label>
+            <Textarea
+              placeholder="要約のためのプロンプトを入力"
+              value={selectedNode.config?.prompt || ""}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                handleNodePropertyChange("config", {
+                  ...selectedNode.config,
+                  prompt: e.target.value,
+                })
+              }
+            />
+          </div>
+        );
+      case "chat":
+        return (
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700">
+              チャットプロンプト
+            </label>
+            <Textarea
+              placeholder="チャットボットの初期プロンプトを入力"
+              value={selectedNode.config?.prompt || ""}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                handleNodePropertyChange("config", {
+                  ...selectedNode.config,
+                  prompt: e.target.value,
+                })
+              }
+            />
+          </div>
+        );
+      default:
+        return null;
     }
   };
 
@@ -320,7 +317,22 @@ const PromptFlow = () => {
           </div>
         ))}
         <Select
-          onValueChange={(value: "summarize" | "chat") =>
+          onValueChange={(value: "tool" | "model") => setNewNodeCategory(value)}
+          defaultValue={newNodeCategory}
+        >
+          <SelectTrigger className="w-full mb-2">
+            <SelectValue placeholder="ノードカテゴリを選択" />
+          </SelectTrigger>
+          <SelectContent>
+            {Object.keys(nodeFunctions).map((category) => (
+              <SelectItem key={category} value={category}>
+                {category}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          onValueChange={(value: "summarize" | "chat" | "model1" | "model2") =>
             setNewNodeFunction(value)
           }
           defaultValue={newNodeFunction}
@@ -329,7 +341,7 @@ const PromptFlow = () => {
             <SelectValue placeholder="ノード機能を選択" />
           </SelectTrigger>
           <SelectContent>
-            {nodeFunctions.map((func) => (
+            {nodeFunctions[newNodeCategory].map((func) => (
               <SelectItem key={func.value} value={func.value}>
                 {func.label}
               </SelectItem>
@@ -424,6 +436,9 @@ const PromptFlow = () => {
                 })
               }
               className="mt-1"
+              disabled={
+                selectedNode.id === "start" || selectedNode.id === "end"
+              }
             />
           </div>
           {selectedNode.id !== "start" && selectedNode.id !== "end" && (
@@ -433,26 +448,72 @@ const PromptFlow = () => {
                   ノード機能
                 </label>
                 <Select
-                  onValueChange={(value: "summarize" | "chat") =>
-                    handleNodePropertyChange("nodeFunction", value)
-                  }
+                  onValueChange={(
+                    value: "summarize" | "chat" | "model1" | "model2"
+                  ) => handleNodePropertyChange("nodeFunction", value)}
                   defaultValue={selectedNode.nodeFunction}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="ノード機能を選択" />
                   </SelectTrigger>
                   <SelectContent>
-                    {nodeFunctions.map((func) => (
-                      <SelectItem key={func.value} value={func.value}>
-                        {func.label}
+                    {nodeFunctions[selectedNode.nodeCategory || "tool"].map(
+                      (func) => (
+                        <SelectItem key={func.value} value={func.value}>
+                          {func.label}
+                        </SelectItem>
+                      )
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700">
+                  入力タイプ
+                </label>
+                <Select
+                  onValueChange={(value: "text" | "file") =>
+                    handleNodePropertyChange("inputType", value)
+                  }
+                  defaultValue={selectedNode.inputType}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="入力タイプを選択" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {inputTypes.map((type) => (
+                      <SelectItem key={type.value} value={type.value}>
+                        {type.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700">
+                  出力タイプ
+                </label>
+                <Select
+                  onValueChange={(value: "text" | "file") =>
+                    handleNodePropertyChange("outputType", value)
+                  }
+                  defaultValue={selectedNode.outputType}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="出力タイプを選択" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {outputTypes.map((type) => (
+                      <SelectItem key={type.value} value={type.value}>
+                        {type.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {renderNodeConfig()}
             </>
           )}
-          {renderNodeConfig()}
         </div>
       )}
     </div>
