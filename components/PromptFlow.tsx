@@ -60,10 +60,7 @@ const initialNodes: NodeType[] = [
   },
 ];
 
-const initialEdges = [
-  { id: "e-start-1", source: "start", target: "1" },
-  { id: "e1-end", source: "1", target: "end" },
-];
+const initialEdges = [{ id: "e-start-end", source: "start", target: "end" }];
 
 const nodeFunctions = {
   tool: [
@@ -146,15 +143,21 @@ const PromptFlow = () => {
     const sourceNodeId = selectedNode
       ? selectedNode.id
       : nodes[nodes.length - 2].id;
-    const targetNodeId =
-      selectedNode && selectedNode.id !== "end" ? selectedNode.id : "end";
+    const targetNodeId = "end";
 
     const newEdges = [
-      ...edges.filter((edge) => edge.target !== targetNodeId),
+      ...edges.filter(
+        (edge) => edge.target !== targetNodeId && edge.source !== sourceNodeId
+      ),
       {
         id: `e${sourceNodeId}-${newNodeId}`,
         source: sourceNodeId,
         target: newNodeId,
+      },
+      {
+        id: `e${newNodeId}-${targetNodeId}`,
+        source: newNodeId,
+        target: targetNodeId,
       },
     ];
     setEdges(newEdges);
@@ -266,11 +269,20 @@ const PromptFlow = () => {
         version: "1.0",
         type: "dbbot",
         categories: nodes.map((node) => ({
-          name: node.data.label,
-          type: node.nodeFunction,
+          id: node.id,
+          type: node.type,
+          data: { label: node.data.label },
+          position: node.position,
+          nodeFunction: node.nodeFunction,
           inputType: node.inputType,
           outputType: node.outputType,
           config: node.config,
+          nodeCategory: node.nodeCategory,
+        })),
+        edges: edges.map((edge) => ({
+          id: edge.id,
+          source: edge.source,
+          target: edge.target,
         })),
       },
       metadata: {
@@ -278,6 +290,8 @@ const PromptFlow = () => {
         timestamp: new Date().toISOString(),
       },
     };
+
+    console.log("Sending data:", JSON.stringify(jsonData, null, 2));
 
     try {
       const response = await fetch("http://localhost:8000/execute", {
@@ -289,17 +303,17 @@ const PromptFlow = () => {
       });
 
       if (!response.ok) {
-        throw new Error("API request failed");
+        const errorText = await response.text();
+        throw new Error(`API request failed: ${response.status} ${errorText}`);
       }
 
       const data = await response.json();
       setExecutionResult(data.result);
     } catch (error) {
-      console.error("Error executing prompt flow:", error as Error);
+      console.error("Error executing prompt flow:", error);
       setExecutionError(error instanceof Error ? error.message : String(error));
     }
   };
-
   return (
     <div className="flex h-screen bg-gray-100">
       {/* Left Sidebar */}
