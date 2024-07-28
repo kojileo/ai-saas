@@ -38,7 +38,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 type NodeType = ReactFlowNode & {
   type: string;
-  nodeFunction?: "summarize" | "chat" | "model1" | "model2";
+  nodeFunction?: "web" | "db" | "model1" | "model2";
   inputType?: "text" | "file";
   outputType?: "text" | "file";
   config?: any;
@@ -67,8 +67,8 @@ const initialEdges = [
 
 const nodeFunctions = {
   tool: [
-    { value: "summarize", label: "要約" },
-    { value: "chat", label: "チャット" },
+    { value: "web", label: "web検索" },
+    { value: "db", label: "データベース検索" },
   ],
   model: [
     { value: "model1", label: "モデル1" },
@@ -91,8 +91,8 @@ const PromptFlow = () => {
   const [edges, setEdges] = useState(initialEdges);
   const [selectedNode, setSelectedNode] = useState<NodeType | null>(null);
   const [newNodeFunction, setNewNodeFunction] = useState<
-    "summarize" | "chat" | "model1" | "model2"
-  >("summarize");
+    "web" | "db" | "model1" | "model2"
+  >("web");
   const [newNodeCategory, setNewNodeCategory] = useState<"tool" | "model">(
     "tool"
   );
@@ -143,18 +143,18 @@ const PromptFlow = () => {
     const newNodes = [...nodes.slice(0, -1), newNode, nodes[nodes.length - 1]];
     setNodes(newNodes);
 
-    const lastNodeId = nodes[nodes.length - 2].id;
+    const sourceNodeId = selectedNode
+      ? selectedNode.id
+      : nodes[nodes.length - 2].id;
+    const targetNodeId =
+      selectedNode && selectedNode.id !== "end" ? selectedNode.id : "end";
+
     const newEdges = [
-      ...edges.filter((edge) => edge.target !== "end"),
+      ...edges.filter((edge) => edge.target !== targetNodeId),
       {
-        id: `e${lastNodeId}-${newNodeId}`,
-        source: lastNodeId,
+        id: `e${sourceNodeId}-${newNodeId}`,
+        source: sourceNodeId,
         target: newNodeId,
-      },
-      {
-        id: `e${newNodeId}-end`,
-        source: newNodeId,
-        target: "end",
       },
     ];
     setEdges(newEdges);
@@ -213,14 +213,14 @@ const PromptFlow = () => {
     if (!selectedNode) return null;
 
     switch (selectedNode.nodeFunction) {
-      case "summarize":
+      case "web":
         return (
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700">
-              要約プロンプト
+              web検索プロンプト
             </label>
             <Textarea
-              placeholder="要約のためのプロンプトを入力"
+              placeholder="web検索のためのプロンプトを入力"
               value={selectedNode.config?.prompt || ""}
               onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
                 handleNodePropertyChange("config", {
@@ -231,14 +231,14 @@ const PromptFlow = () => {
             />
           </div>
         );
-      case "chat":
+      case "db":
         return (
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700">
-              チャットプロンプト
+              データベース検索プロンプト
             </label>
             <Textarea
-              placeholder="チャットボットの初期プロンプトを入力"
+              placeholder="データベース検索ボットの初期プロンプトを入力"
               value={selectedNode.config?.prompt || ""}
               onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
                 handleNodePropertyChange("config", {
@@ -264,7 +264,7 @@ const PromptFlow = () => {
       apiSpecification: {
         name: "CustomAPI",
         version: "1.0",
-        type: "chatbot",
+        type: "dbbot",
         categories: nodes.map((node) => ({
           name: node.data.label,
           type: node.nodeFunction,
@@ -332,7 +332,7 @@ const PromptFlow = () => {
           </SelectContent>
         </Select>
         <Select
-          onValueChange={(value: "summarize" | "chat" | "model1" | "model2") =>
+          onValueChange={(value: "web" | "db" | "model1" | "model2") =>
             setNewNodeFunction(value)
           }
           defaultValue={newNodeFunction}
@@ -448,9 +448,9 @@ const PromptFlow = () => {
                   ノード機能
                 </label>
                 <Select
-                  onValueChange={(
-                    value: "summarize" | "chat" | "model1" | "model2"
-                  ) => handleNodePropertyChange("nodeFunction", value)}
+                  onValueChange={(value: "web" | "db" | "model1" | "model2") =>
+                    handleNodePropertyChange("nodeFunction", value)
+                  }
                   defaultValue={selectedNode.nodeFunction}
                 >
                   <SelectTrigger className="w-full">
