@@ -6,24 +6,15 @@ import ReactFlow, {
   addEdge,
   applyEdgeChanges,
   applyNodeChanges,
+  Node,
+  Edge,
+  Connection,
+  BackgroundVariant,
   NodeChange,
   EdgeChange,
-  Connection,
-  Node as ReactFlowNode,
-  BackgroundVariant,
 } from "reactflow";
 import "reactflow/dist/style.css";
-import {
-  ChevronRight,
-  Plus,
-  Save,
-  Play,
-  Settings,
-  Upload,
-  MessageSquare,
-  FileText,
-  GitBranch,
-} from "lucide-react";
+import { Plus, Play, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -33,75 +24,67 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import Textarea from "@/components/ui/textarea";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-type NodeType = ReactFlowNode & {
-  type: string;
-  nodeFunction?: "web" | "db" | "model1" | "model2";
-  inputType?: "text" | "file";
-  outputType?: "text" | "file";
-  config?: any;
-  nodeCategory?: "tool" | "model";
+type NodeData = {
+  label: string;
+  nodeType: string;
+  nodeParameter: Record<string, any>;
 };
 
-const initialNodes: NodeType[] = [
+type FlowNode = Node<NodeData>;
+
+type ApiRequest = {
+  apiEndPoint: string;
+  description: string;
+  apiType: string;
+  apiRequestParameters: any[];
+  apiRequestHeaders: any[];
+  apiRequestBody: any[];
+  apiResponseHeaders: any[];
+  apiResponseBody: any[];
+  flow: Array<{
+    node?: {
+      nodeName: string;
+      nodeType: string;
+      nodeParameter: any[];
+      entryPoint: boolean;
+    };
+    edge?: {
+      edgeType: string;
+      edgeFrom: string;
+      edgeTo: string | string[];
+    };
+  }>;
+};
+
+const nodeTypes = [
+  { value: "inputFile", label: "ファイル入力" },
+  { value: "if", label: "条件" },
+  { value: "summarize", label: "要約" },
+  { value: "end", label: "END" },
+];
+
+const initialNodes: FlowNode[] = [
   {
-    id: "start",
+    id: "1",
     type: "input",
-    data: { label: "開始" },
+    data: { label: "開始", nodeType: "start", nodeParameter: {} },
     position: { x: 250, y: 5 },
   },
-  {
-    id: "end",
-    type: "output",
-    data: { label: "終了" },
-    position: { x: 250, y: 200 },
-  },
-];
-
-const initialEdges = [{ id: "e-start-end", source: "start", target: "end" }];
-
-const nodeFunctions = {
-  tool: [
-    { value: "web", label: "web検索" },
-    { value: "db", label: "データベース検索" },
-  ],
-  model: [
-    { value: "model1", label: "モデル1" },
-    { value: "model2", label: "モデル2" },
-  ],
-};
-
-const inputTypes = [
-  { value: "text", label: "テキスト" },
-  { value: "file", label: "ファイル" },
-];
-
-const outputTypes = [
-  { value: "text", label: "テキスト" },
-  { value: "file", label: "ファイル" },
 ];
 
 const PromptFlow = () => {
-  const [nodes, setNodes] = useState<NodeType[]>(initialNodes);
-  const [edges, setEdges] = useState(initialEdges);
-  const [selectedNode, setSelectedNode] = useState<NodeType | null>(null);
-  const [newNodeFunction, setNewNodeFunction] = useState<
-    "web" | "db" | "model1" | "model2"
-  >("web");
-  const [newNodeCategory, setNewNodeCategory] = useState<"tool" | "model">(
-    "tool"
-  );
+  const [nodes, setNodes] = useState<FlowNode[]>(initialNodes);
+  const [edges, setEdges] = useState<Edge[]>([]);
+  const [selectedNode, setSelectedNode] = useState<FlowNode | null>(null);
   const [apiEndpoint, setApiEndpoint] = useState("");
   const [executionResult, setExecutionResult] = useState(null);
   const [executionError, setExecutionError] = useState<string | null>(null);
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) =>
-      setNodes(
-        (nds: NodeType[]) => applyNodeChanges(changes, nds) as NodeType[]
-      ),
+      setNodes((nds) => applyNodeChanges(changes, nds)),
     [setNodes]
   );
   const onEdgesChange = useCallback(
@@ -114,100 +97,46 @@ const PromptFlow = () => {
     [setEdges]
   );
 
-  const handleNodeClick = (event: React.MouseEvent, node: ReactFlowNode) => {
+  const handleNodeClick = (event: React.MouseEvent, node: Node) => {
     event.preventDefault();
-    setSelectedNode(node as NodeType);
+    setSelectedNode(node);
   };
 
   const handleAddNode = () => {
-    const newNodeId = (nodes.length + 1).toString();
-    const newNode: NodeType = {
-      id: newNodeId,
-      data: {
-        label:
-          nodeFunctions[newNodeCategory].find(
-            (f) => f.value === newNodeFunction
-          )?.label || "新規ノード",
-      },
-      position: { x: 250, y: nodes.length * 100 },
+    const newNode: FlowNode = {
+      id: (nodes.length + 1).toString(),
       type: "default",
-      nodeCategory: newNodeCategory,
-      nodeFunction: newNodeFunction,
-      inputType: "text",
-      outputType: "text",
+      data: { label: "新規ノード", nodeType: "inputFile", nodeParameter: {} },
+      position: { x: 250, y: nodes.length * 100 },
     };
-
-    const newNodes = [...nodes.slice(0, -1), newNode, nodes[nodes.length - 1]];
-    setNodes(newNodes);
-
-    const sourceNodeId = selectedNode
-      ? selectedNode.id
-      : nodes[nodes.length - 2].id;
-    const targetNodeId = "end";
-
-    const newEdges = [
-      ...edges.filter(
-        (edge) => edge.target !== targetNodeId && edge.source !== sourceNodeId
-      ),
-      {
-        id: `e${sourceNodeId}-${newNodeId}`,
-        source: sourceNodeId,
-        target: newNodeId,
-      },
-      {
-        id: `e${newNodeId}-${targetNodeId}`,
-        source: newNodeId,
-        target: targetNodeId,
-      },
-    ];
-    setEdges(newEdges);
+    setNodes((nds) => [...nds, newNode]);
   };
 
   const handleDeleteNode = () => {
-    if (
-      selectedNode &&
-      selectedNode.id !== "start" &&
-      selectedNode.id !== "end"
-    ) {
-      const selectedIndex = nodes.findIndex(
-        (node) => node.id === selectedNode.id
+    if (selectedNode && selectedNode.id !== "1") {
+      setNodes((nds) => nds.filter((node) => node.id !== selectedNode.id));
+      setEdges((eds) =>
+        eds.filter(
+          (edge) =>
+            edge.source !== selectedNode.id && edge.target !== selectedNode.id
+        )
       );
-      const newNodes = nodes.filter((node) => node.id !== selectedNode.id);
-
-      const newEdges = edges.filter(
-        (edge) =>
-          edge.source !== selectedNode.id && edge.target !== selectedNode.id
-      );
-      if (selectedIndex > 0 && selectedIndex < nodes.length - 1) {
-        newEdges.push({
-          id: `e${nodes[selectedIndex - 1].id}-${nodes[selectedIndex + 1].id}`,
-          source: nodes[selectedIndex - 1].id,
-          target: nodes[selectedIndex + 1].id,
-        });
-      }
-
-      setNodes(newNodes);
-      setEdges(newEdges);
       setSelectedNode(null);
     }
   };
 
   const handleNodePropertyChange = (property: string, value: any) => {
     if (selectedNode) {
-      const updatedNodes = nodes.map((node) =>
-        node.id === selectedNode.id
-          ? {
-              ...node,
-              [property]:
-                property === "data" ? { ...node.data, ...value } : value,
-            }
-          : node
+      setNodes((nds) =>
+        nds.map((node) =>
+          node.id === selectedNode.id
+            ? { ...node, data: { ...node.data, [property]: value } }
+            : node
+        )
       );
-      setNodes(updatedNodes);
       setSelectedNode({
         ...selectedNode,
-        [property]:
-          property === "data" ? { ...selectedNode.data, ...value } : value,
+        data: { ...selectedNode.data, [property]: value },
       });
     }
   };
@@ -215,42 +144,45 @@ const PromptFlow = () => {
   const renderNodeConfig = () => {
     if (!selectedNode) return null;
 
-    switch (selectedNode.nodeFunction) {
-      case "web":
+    switch (selectedNode.data.nodeType) {
+      case "inputFile":
         return (
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700">
-              web検索プロンプト
-            </label>
-            <Textarea
-              placeholder="web検索のためのプロンプトを入力"
-              value={selectedNode.config?.prompt || ""}
-              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                handleNodePropertyChange("config", {
-                  ...selectedNode.config,
-                  prompt: e.target.value,
-                })
-              }
-            />
-          </div>
+          <Input
+            placeholder="ファイルパスを入力"
+            value={selectedNode.data.nodeParameter.path || ""}
+            onChange={(e) =>
+              handleNodePropertyChange("nodeParameter", {
+                ...selectedNode.data.nodeParameter,
+                path: e.target.value,
+              })
+            }
+          />
         );
-      case "db":
+      case "if":
         return (
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700">
-              データベース検索プロンプト
-            </label>
-            <Textarea
-              placeholder="データベース検索ボットの初期プロンプトを入力"
-              value={selectedNode.config?.prompt || ""}
-              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                handleNodePropertyChange("config", {
-                  ...selectedNode.config,
-                  prompt: e.target.value,
-                })
-              }
-            />
-          </div>
+          <Input
+            placeholder="条件を入力"
+            value={selectedNode.data.nodeParameter.condition || ""}
+            onChange={(e) =>
+              handleNodePropertyChange("nodeParameter", {
+                ...selectedNode.data.nodeParameter,
+                condition: e.target.value,
+              })
+            }
+          />
+        );
+      case "summarize":
+        return (
+          <Input
+            placeholder="モデルを入力"
+            value={selectedNode.data.nodeParameter.model || ""}
+            onChange={(e) =>
+              handleNodePropertyChange("nodeParameter", {
+                ...selectedNode.data.nodeParameter,
+                model: e.target.value,
+              })
+            }
+          />
         );
       default:
         return null;
@@ -258,48 +190,47 @@ const PromptFlow = () => {
   };
 
   const handleExecute = async () => {
-    setApiEndpoint("http://localhost:8000/execute");
+    setApiEndpoint("http://localhost:8000/createapi");
     setExecutionResult(null);
     setExecutionError(null);
 
-    const jsonData = {
-      requestType: "create_api",
-      apiSpecification: {
-        name: "CustomAPI",
-        version: "1.0",
-        type: "dbbot",
-        categories: nodes.map((node) => ({
-          id: node.id,
-          type: node.type,
-          data: { label: node.data.label },
-          position: node.position,
-          nodeFunction: node.nodeFunction,
-          inputType: node.inputType,
-          outputType: node.outputType,
-          config: node.config,
-          nodeCategory: node.nodeCategory,
-        })),
-        edges: edges.map((edge) => ({
-          id: edge.id,
-          source: edge.source,
-          target: edge.target,
-        })),
-      },
-      metadata: {
-        requesterId: "frontend-001",
-        timestamp: new Date().toISOString(),
-      },
+    const apiRequest: ApiRequest = {
+      apiEndPoint: "summarizeFile",
+      description:
+        "インプットに指定したファイルを要約してテキストとして返却するAPIです。",
+      apiType: "POST",
+      apiRequestParameters: [],
+      apiRequestHeaders: [],
+      apiRequestBody: [
+        {
+          fileName: "{FilePath}",
+        },
+      ],
+      apiResponseHeaders: [],
+      apiResponseBody: [
+        {
+          message: "{Message}",
+        },
+      ],
+      flow: nodes.map((node, index) => ({
+        node: {
+          nodeName: node.data.label,
+          nodeType: node.data.nodeType,
+          nodeParameter: [node.data.nodeParameter],
+          entryPoint: index === 0,
+        },
+      })),
     };
 
-    console.log("Sending data:", JSON.stringify(jsonData, null, 2));
+    console.log("送信データ:", JSON.stringify(apiRequest, null, 2));
 
     try {
-      const response = await fetch("http://localhost:8000/execute", {
+      const response = await fetch("http://localhost:8000/createapi", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(jsonData),
+        body: JSON.stringify(apiRequest),
       });
 
       if (!response.ok) {
@@ -324,44 +255,12 @@ const PromptFlow = () => {
             key={node.id}
             className={`p-2 mb-2 rounded cursor-pointer ${
               selectedNode === node ? "bg-blue-100" : "hover:bg-gray-100"
-            } ${node.id === "start" || node.id === "end" ? "font-bold" : ""}`}
+            }`}
             onClick={() => setSelectedNode(node)}
           >
             {node.data.label}
           </div>
         ))}
-        <Select
-          onValueChange={(value: "tool" | "model") => setNewNodeCategory(value)}
-          defaultValue={newNodeCategory}
-        >
-          <SelectTrigger className="w-full mb-2">
-            <SelectValue placeholder="ノードカテゴリを選択" />
-          </SelectTrigger>
-          <SelectContent>
-            {Object.keys(nodeFunctions).map((category) => (
-              <SelectItem key={category} value={category}>
-                {category}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select
-          onValueChange={(value: "web" | "db" | "model1" | "model2") =>
-            setNewNodeFunction(value)
-          }
-          defaultValue={newNodeFunction}
-        >
-          <SelectTrigger className="w-full mb-2">
-            <SelectValue placeholder="ノード機能を選択" />
-          </SelectTrigger>
-          <SelectContent>
-            {nodeFunctions[newNodeCategory].map((func) => (
-              <SelectItem key={func.value} value={func.value}>
-                {func.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
         <Button onClick={handleAddNode} className="mt-2 w-full">
           <Plus className="mr-2 h-4 w-4" /> ノードを追加
         </Button>
@@ -374,7 +273,7 @@ const PromptFlow = () => {
             selectedNode.id === "end"
           }
         >
-          <Plus className="mr-2 h-4 w-4" /> ノードを削除
+          <Trash2 className="mr-2 h-4 w-4" /> ノードを削除
         </Button>
       </div>
 
@@ -382,11 +281,9 @@ const PromptFlow = () => {
       <div className="flex-1 p-4 overflow-y-auto">
         <div className="mb-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold">ワークスペース</h1>
-          <div>
-            <Button onClick={handleExecute}>
-              <Play className="mr-2 h-4 w-4" /> 実行
-            </Button>
-          </div>
+          <Button onClick={handleExecute}>
+            <Play className="mr-2 h-4 w-4" /> 実行
+          </Button>
         </div>
 
         {/* Flow Canvas */}
@@ -444,90 +341,34 @@ const PromptFlow = () => {
             <Input
               value={selectedNode.data.label}
               onChange={(e) =>
-                handleNodePropertyChange("data", {
-                  ...selectedNode.data,
-                  label: e.target.value,
-                })
+                handleNodePropertyChange("label", e.target.value)
               }
               className="mt-1"
-              disabled={
-                selectedNode.id === "start" || selectedNode.id === "end"
-              }
             />
           </div>
-          {selectedNode.id !== "start" && selectedNode.id !== "end" && (
-            <>
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700">
-                  ノード機能
-                </label>
-                <Select
-                  onValueChange={(value: "web" | "db" | "model1" | "model2") =>
-                    handleNodePropertyChange("nodeFunction", value)
-                  }
-                  defaultValue={selectedNode.nodeFunction}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="ノード機能を選択" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {nodeFunctions[selectedNode.nodeCategory || "tool"].map(
-                      (func) => (
-                        <SelectItem key={func.value} value={func.value}>
-                          {func.label}
-                        </SelectItem>
-                      )
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700">
-                  入力タイプ
-                </label>
-                <Select
-                  onValueChange={(value: "text" | "file") =>
-                    handleNodePropertyChange("inputType", value)
-                  }
-                  defaultValue={selectedNode.inputType}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="入力タイプを選択" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {inputTypes.map((type) => (
-                      <SelectItem key={type.value} value={type.value}>
-                        {type.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700">
-                  出力タイプ
-                </label>
-                <Select
-                  onValueChange={(value: "text" | "file") =>
-                    handleNodePropertyChange("outputType", value)
-                  }
-                  defaultValue={selectedNode.outputType}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="出力タイプを選択" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {outputTypes.map((type) => (
-                      <SelectItem key={type.value} value={type.value}>
-                        {type.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              {renderNodeConfig()}
-            </>
-          )}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700">
+              ノードタイプ
+            </label>
+            <Select
+              onValueChange={(value) =>
+                handleNodePropertyChange("nodeType", value)
+              }
+              defaultValue={selectedNode.data.nodeType}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="ノードタイプを選択" />
+              </SelectTrigger>
+              <SelectContent>
+                {nodeTypes.map((type) => (
+                  <SelectItem key={type.value} value={type.value}>
+                    {type.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {renderNodeConfig()}
         </div>
       )}
     </div>
